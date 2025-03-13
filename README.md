@@ -53,8 +53,8 @@ The system uses the following database tables:
 #### Middleware
 
 - `Authentication` - Ensures users are authenticated
-- `CheckRole` - Verifies user has required role
-- `CheckPermission` - Verifies user has required permission
+- `CheckRole` - Verifies user has required role(s)
+- `CheckPermission` - Verifies user has required permission(s)
 
 ## Project Setup
 
