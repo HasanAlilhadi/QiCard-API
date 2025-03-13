@@ -114,7 +114,7 @@ The system uses the following database tables:
 After running the migrations and seeders, a default admin user will be created:
 
 - **Username**: admin
-- **Password**: 1234 (change this in production!)
+- **Password**: 1234
 - **Role**: super_admin
 
 ## API Endpoints
@@ -182,12 +182,6 @@ After running the migrations and seeders, a default admin user will be created:
 2. Group permissions logically by feature area
 3. Update frontend to utilize the new permission
 
-### Creating Custom Middleware
-
-1. Create middleware class in `App\Http\Middleware`
-2. Register middleware in `app/Http/Kernel.php`
-3. Apply middleware to routes or controller methods
-
 ### Extending Audit Logging
 
 The AuditService can be extended to log additional entity types:
@@ -195,9 +189,3 @@ The AuditService can be extended to log additional entity types:
 1. Add new methods to `AuditService.php`
 2. Follow the pattern of existing methods
 3. Call your new methods from relevant controllers
-
-
-
-## License
-
-This project is licensed under the [MIT License](LICENSE.md).
