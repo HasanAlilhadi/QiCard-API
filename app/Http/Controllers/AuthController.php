@@ -19,6 +19,49 @@ class AuthController extends BaseController
         $this->auditService = $auditService;
     }
 
+    /**
+     * @OA\Post(
+     *     path="/auth/login",
+     *     summary="Authenticate user and generate token",
+     *     description="Login with username and password to get auth token",
+     *     operationId="login",
+     *     tags={"Authentication"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"username","password"},
+     *             @OA\Property(property="username", type="string", example="admin"),
+     *             @OA\Property(property="password", type="string", format="password", example="1234")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Success",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="success"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(
+     *                     property="user",
+     *                     type="object",
+     *                     ref="#/components/schemas/User"
+     *                 ),
+     *                 @OA\Property(property="token", type="string", example="1|laravel_sanctum_token_hash"),
+     *                 @OA\Property(property="token_type", type="string", example="bearer")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Invalid credentials",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Invalid Credentials")
+     *         )
+     *     )
+     * )
+     */
     public function login(Request $request)
     {
         $user = User::where('username', $request->username)->first();
@@ -66,6 +109,32 @@ class AuthController extends BaseController
         );
     }
 
+    /**
+     * @OA\Post(
+     *     path="/auth/logout",
+     *     summary="Logout user",
+     *     description="Invalidate the user's authentication token",
+     *     operationId="logout",
+     *     tags={"Authentication"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Response(
+     *         response=200,
+     *         description="Success",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Logged out successfully.")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthenticated",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Unauthenticated.")
+     *         )
+     *     )
+     * )
+     */
     public function logout()
     {
         $user = auth()->user();
@@ -84,6 +153,44 @@ class AuthController extends BaseController
         return $this->message('Logged out successfully.', 200);
     }
 
+    /**
+     * @OA\Get(
+     *     path="/auth/me",
+     *     summary="Get authenticated user details",
+     *     description="Returns the currently authenticated user's information",
+     *     operationId="me",
+     *     tags={"Authentication"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Response(
+     *         response=200,
+     *         description="Success",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="success"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 ref="#/components/schemas/User"
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthenticated",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Unauthenticated.")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="User not found",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Something went wrong.")
+     *         )
+     *     )
+     * )
+     */
     public function me(Request $request)
     {
         $user = User::with(['roles', 'permissions'])->find(Auth::id());
@@ -105,6 +212,60 @@ class AuthController extends BaseController
         return $this->success(UserResource::make($user));
     }
 
+    /**
+     * @OA\Post(
+     *     path="/auth/update",
+     *     summary="Update authenticated user's profile",
+     *     description="Update the current user's name, username, or password",
+     *     operationId="updateProfile",
+     *     tags={"Authentication"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             @OA\Property(property="name", type="string", example="John Doe"),
+     *             @OA\Property(property="username", type="string", example="johndoe"),
+     *             @OA\Property(property="password", type="string", format="password", example="new_password")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Success",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="success"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 ref="#/components/schemas/User"
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthenticated",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Unauthenticated.")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Validation Error",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="The given data was invalid."),
+     *             @OA\Property(
+     *                 property="errors",
+     *                 type="object",
+     *                 @OA\Property(
+     *                     property="username",
+     *                     type="array",
+     *                     @OA\Items(type="string", example="The username has already been taken.")
+     *                 )
+     *             )
+     *         )
+     *     )
+     * )
+     */
     public function update(UpdateAuthRequest $request)
     {
         $user = auth()->user();

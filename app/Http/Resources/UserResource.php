@@ -26,7 +26,6 @@ class UserResource extends BaseResource
             'permissions' => PermissionResource::collection($this->whenLoaded('permissions')),
             'creator' => UserResource::make($this->whenLoaded('creator')),
             'updater' => UserResource::make($this->whenLoaded('updater')),
-            'destroyer' => UserResource::make($this->whenLoaded('destroyer')),
         ];
     }
 }

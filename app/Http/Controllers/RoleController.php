@@ -20,14 +20,108 @@ class RoleController extends BaseController
         $this->auditService = $auditService;
     }
 
-    // Since this is just a task, I didn’t spend time implementing the filter functionality.
+    /**
+     * @OA\Get(
+     *     path="/roles",
+     *     summary="Get list of roles",
+     *     description="Returns a list of all roles with their permissions",
+     *     operationId="getRoles",
+     *     tags={"Roles"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Response(
+     *         response=200,
+     *         description="Success",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="success"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="array",
+     *                 @OA\Items(ref="#/components/schemas/Role")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthenticated",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Unauthenticated.")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Forbidden",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Not authorized."),
+     *             @OA\Property(property="status", type="integer", example=403)
+     *         )
+     *     )
+     * )
+     */
     public function index()
     {
         $roles = Role::with('permissions')->get();
         return $this->success(RoleResource::collection($roles));
     }
 
-    public function show(int $id)
+    /**
+     * @OA\Get(
+     *     path="/roles/{id}",
+     *     summary="Get role details",
+     *     description="Returns details for a specific role by ID",
+     *     operationId="getRoleById",
+     *     tags={"Roles"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         description="ID of role to return",
+     *         required=true,
+     *         @OA\Schema(
+     *             type="integer",
+     *             format="int64"
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Success",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="success"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 ref="#/components/schemas/Role"
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthenticated",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Unauthenticated.")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Forbidden",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Not authorized."),
+     *             @OA\Property(property="status", type="integer", example=403)
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Role not found",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Role not found")
+     *         )
+     *     )
+     * )
+     */
+    public function show($id)
     {
         $role = Role::with('permissions')->find($id);
 
@@ -38,6 +132,73 @@ class RoleController extends BaseController
         return $this->success(RoleResource::make($role));
     }
 
+    /**
+     * @OA\Post(
+     *     path="/roles",
+     *     summary="Create a new role",
+     *     description="Creates a new role with permissions",
+     *     operationId="createRole",
+     *     tags={"Roles"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"name","permissions"},
+     *             @OA\Property(property="name", type="string", example="editor"),
+     *             @OA\Property(
+     *                 property="permissions",
+     *                 type="array",
+     *                 @OA\Items(type="integer", example=1),
+     *                 example={1, 2, 3}
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Success",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Role created successfully"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 ref="#/components/schemas/Role"
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthenticated",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Unauthenticated.")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Forbidden",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Not authorized."),
+     *             @OA\Property(property="status", type="integer", example=403)
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Validation Error",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="The given data was invalid."),
+     *             @OA\Property(
+     *                 property="errors",
+     *                 type="object",
+     *                 @OA\Property(
+     *                     property="name",
+     *                     type="array",
+     *                     @OA\Items(type="string", example="The name has already been taken.")
+     *                 )
+     *             )
+     *         )
+     *     )
+     * )
+     */
     public function store(StoreRoleRequest $request)
     {
         DB::beginTransaction();
@@ -73,26 +234,96 @@ class RoleController extends BaseController
         );
     }
 
+    /**
+     * @OA\Post(
+     *     path="/roles/{id}",
+     *     summary="Update a role",
+     *     description="Updates a role and its permissions by ID",
+     *     operationId="updateRole",
+     *     tags={"Roles"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         description="ID of role to update",
+     *         required=true,
+     *         @OA\Schema(
+     *             type="integer",
+     *             format="int64"
+     *         )
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             @OA\Property(property="name", type="string", example="updated_editor"),
+     *             @OA\Property(
+     *                 property="permissions",
+     *                 type="array",
+     *                 @OA\Items(type="integer", example=1),
+     *                 example={1, 2, 3, 4}
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Success",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Role updated successfully"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 ref="#/components/schemas/Role"
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthenticated",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Unauthenticated.")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Forbidden",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Not authorized."),
+     *             @OA\Property(property="status", type="integer", example=403)
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Role not found",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Role not found")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Validation Error",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="The given data was invalid."),
+     *             @OA\Property(
+     *                 property="errors",
+     *                 type="object",
+     *                 @OA\Property(
+     *                     property="permissions.0",
+     *                     type="array",
+     *                     @OA\Items(type="string", example="The selected permissions.0 is invalid.")
+     *                 )
+     *             )
+     *         )
+     *     )
+     * )
+     */
     public function update(UpdateRoleRequest $request, int $id)
     {
         $role = Role::with('permissions')->find($id);
 
         if (!$role) {
             return $this->notFound('Role not found');
-        }
-
-        if ($role->is_system_role) {
-            $this->auditService->logSecurityViolation(
-                'system_role_modification_attempt',
-                auth()->id(),
-                [
-                    'attempted_action' => 'system_role_update',
-                    'role_id' => $id,
-                    'role_name' => $role->name
-                ]
-            );
-
-            return $this->error('System role cannot be modified.');
         }
 
         DB::beginTransaction();
@@ -135,6 +366,58 @@ class RoleController extends BaseController
         );
     }
 
+    /**
+     * @OA\Delete(
+     *     path="/roles/{id}",
+     *     summary="Delete a role",
+     *     description="Deletes a role by ID",
+     *     operationId="deleteRole",
+     *     tags={"Roles"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         description="ID of role to delete",
+     *         required=true,
+     *         @OA\Schema(
+     *             type="integer",
+     *             format="int64"
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Success",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Role deleted successfully")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthenticated",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Unauthenticated.")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Forbidden",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Role deletion failed")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Role not found",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Role not found")
+     *         )
+     *     )
+     * )
+     */
     public function destroy($id)
     {
         $role = Role::find($id);
@@ -142,7 +425,6 @@ class RoleController extends BaseController
         if (!$role) {
             return $this->notFound('Role not found');
         }
-
 
         DB::beginTransaction();
         $authUser = auth()->user();

@@ -17,11 +17,18 @@ class AuditLogResource extends BaseResource
             'performed_by' => $this->performed_by,
             'ip_address' => $this->ip_address,
             'user_agent' => $this->user_agent,
-            'previous_state' => $this->previous_state,
-            'new_state' => $this->new_state,
+            'previous_state' => json_decode($this->previous_state),
+            'new_state' => json_decode($this->new_state),
             'additional_data' => json_decode($this->additional_data),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
+        ];
+    }
+
+    public function relations(Request $request): array
+    {
+        return [
+            'performer' => UserResource::make($this->whenLoaded('performer')),
         ];
     }
 }

@@ -24,13 +24,6 @@ class BaseModel extends Model
             else
                 $model->updated_by = auth()->user()->id;
         });
-
-        self::deleting(function ($model){
-            if (App::runningInConsole())
-                $model->deleted_by = 1;
-            else
-                $model->deleted_by = auth()->user()->id;
-        });
     }
 
     public function creator(): BelongsTo
@@ -41,10 +34,5 @@ class BaseModel extends Model
     public function updater(): BelongsTo
     {
         return $this->belongsTo(User::class, 'updated_by');
-    }
-
-    public function destroyer(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'deleted_by');
     }
 }

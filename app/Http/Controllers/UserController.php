@@ -11,6 +11,8 @@ use App\Models\User;
 use App\Services\AuditService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 class UserController extends BaseController
 {
@@ -21,7 +23,45 @@ class UserController extends BaseController
         $this->auditService = $auditService;
     }
 
-    // Since this is just a task, I didn’t spend time implementing the filter functionality.
+    /**
+     * @OA\Get(
+     *     path="/users",
+     *     summary="Get list of users",
+     *     description="Returns a list of all users with their roles and permissions",
+     *     operationId="getUsers",
+     *     tags={"Users"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Response(
+     *         response=200,
+     *         description="Success",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="success"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="array",
+     *                 @OA\Items(ref="#/components/schemas/User")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthenticated",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Unauthenticated.")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Forbidden",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Not authorized."),
+     *             @OA\Property(property="status", type="integer", example=403)
+     *         )
+     *     )
+     * )
+     */
     public function index()
     {
         $query = User::query()->with(['roles', 'permissions', 'creator', 'updater']);
@@ -30,11 +70,67 @@ class UserController extends BaseController
         return $this->success(UserResource::collection($users));
     }
 
+    /**
+     * @OA\Get(
+     *     path="/users/{id}",
+     *     summary="Get user details",
+     *     description="Returns details for a specific user by ID",
+     *     operationId="getUserById",
+     *     tags={"Users"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         description="ID of user to return",
+     *         required=true,
+     *         @OA\Schema(
+     *             type="integer",
+     *             format="int64"
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Success",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="success"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 ref="#/components/schemas/User"
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthenticated",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Unauthenticated.")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Forbidden",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Not authorized."),
+     *             @OA\Property(property="status", type="integer", example=403)
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="User not found",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="User not found.")
+     *         )
+     *     )
+     * )
+     */
     public function show(int $id)
     {
         $user = User::find($id);
 
-        if (!$user) {
+        if (!$user || $user->super_admin) {
             return $this->notFound('User not found.');
         }
 
@@ -43,6 +139,69 @@ class UserController extends BaseController
         return $this->success(UserResource::make($user));
     }
 
+    /**
+     * @OA\Post(
+     *     path="/users",
+     *     summary="Create a new user",
+     *     description="Creates a new user with the provided information",
+     *     operationId="createUser",
+     *     tags={"Users"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"name","username","password"},
+     *             @OA\Property(property="name", type="string", example="John Doe"),
+     *             @OA\Property(property="username", type="string", example="johndoe"),
+     *             @OA\Property(property="password", type="string", format="password", example="password123")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Success",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="User has been created."),
+     *             @OA\Property(
+     *                 property="data",
+     *                 ref="#/components/schemas/User"
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthenticated",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Unauthenticated.")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Forbidden",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Not authorized."),
+     *             @OA\Property(property="status", type="integer", example=403)
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Validation Error",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="The given data was invalid."),
+     *             @OA\Property(
+     *                 property="errors",
+     *                 type="object",
+     *                 @OA\Property(
+     *                     property="username",
+     *                     type="array",
+     *                     @OA\Items(type="string", example="The username has already been taken.")
+     *                 )
+     *             )
+     *         )
+     *     )
+     * )
+     */
     public function store(StoreUserRequest $request)
     {
         DB::beginTransaction();
@@ -74,6 +233,86 @@ class UserController extends BaseController
         );
     }
 
+    /**
+     * @OA\Post(
+     *     path="/users/{id}",
+     *     summary="Update a user",
+     *     description="Updates a user's information by ID",
+     *     operationId="updateUser",
+     *     tags={"Users"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         description="ID of user to update",
+     *         required=true,
+     *         @OA\Schema(
+     *             type="integer",
+     *             format="int64"
+     *         )
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             @OA\Property(property="name", type="string", example="Updated Name"),
+     *             @OA\Property(property="username", type="string", example="updated_username"),
+     *             @OA\Property(property="password", type="string", format="password", example="new_password")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Success",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="User has been updated."),
+     *             @OA\Property(
+     *                 property="data",
+     *                 ref="#/components/schemas/User"
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthenticated",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Unauthenticated.")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Forbidden",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Not authorized."),
+     *             @OA\Property(property="status", type="integer", example=403)
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="User not found",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="User not found.")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Validation Error",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="The given data was invalid."),
+     *             @OA\Property(
+     *                 property="errors",
+     *                 type="object",
+     *                 @OA\Property(
+     *                     property="username",
+     *                     type="array",
+     *                     @OA\Items(type="string", example="The username has already been taken.")
+     *                 )
+     *             )
+     *         )
+     *     )
+     * )
+     */
     public function update(UpdateUserRequest $request, int $id)
     {
         $user = User::query()->where('super_admin', '=',false)->find($id);
@@ -127,6 +366,58 @@ class UserController extends BaseController
         );
     }
 
+    /**
+     * @OA\Delete(
+     *     path="/users/{id}",
+     *     summary="Delete a user",
+     *     description="Deletes a user by ID",
+     *     operationId="deleteUser",
+     *     tags={"Users"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         description="ID of user to delete",
+     *         required=true,
+     *         @OA\Schema(
+     *             type="integer",
+     *             format="int64"
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Success",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="User has been deleted.")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthenticated",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Unauthenticated.")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Forbidden",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Not authorized."),
+     *             @OA\Property(property="status", type="integer", example=403)
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="User not found",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="User not found.")
+     *         )
+     *     )
+     * )
+     */
     public function destroy(int $id)
     {
         $user = User::query()->where('super_admin', '=', false)->find($id);
@@ -163,6 +454,88 @@ class UserController extends BaseController
         return $this->success(null, 'User has been deleted.');
     }
 
+    /**
+     * @OA\Post(
+     *     path="/users/{id}/roles",
+     *     summary="Assign roles to a user",
+     *     description="Assigns roles to a user by ID",
+     *     operationId="assignRolesToUser",
+     *     tags={"Users"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         description="ID of user to assign roles to",
+     *         required=true,
+     *         @OA\Schema(
+     *             type="integer",
+     *             format="int64"
+     *         )
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             @OA\Property(
+     *                 property="roles",
+     *                 type="array",
+     *                 @OA\Items(type="integer", example=1)
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Success",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="User has been updated."),
+     *             @OA\Property(
+     *                 property="data",
+     *                 ref="#/components/schemas/User"
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthenticated",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Unauthenticated.")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Forbidden",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Not authorized."),
+     *             @OA\Property(property="status", type="integer", example=403)
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="User not found",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="User not found.")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Validation Error",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="The given data was invalid."),
+     *             @OA\Property(
+     *                 property="errors",
+     *                 type="object",
+     *                 @OA\Property(
+     *                     property="roles.0",
+     *                     type="array",
+     *                     @OA\Items(type="string", example="The selected roles.0 is invalid.")
+     *                 )
+     *             )
+     *         )
+     *     )
+     * )
+     */
     public function assignRoles(AssignRolesRequest $request, int $id)
     {
         $user = User::query()->where('super_admin', '=', false)->find($id);
@@ -187,8 +560,8 @@ class UserController extends BaseController
             'user_roles_updated',
             $authUser->id,
             $user->id,
-            $originalRoles,
-            $roleIds
+            Role::query()->whereIn('id', $originalRoles)->pluck('name')->toArray(),
+            Role::query()->whereIn('id', $roleIds)->pluck('name')->toArray(),
         );
 
         DB::commit();
@@ -199,6 +572,88 @@ class UserController extends BaseController
         );
     }
 
+    /**
+     * @OA\Post(
+     *     path="/users/{id}/permissions",
+     *     summary="Assign permissions to a user",
+     *     description="Assigns direct permissions to a user by ID",
+     *     operationId="assignPermissionsToUser",
+     *     tags={"Users"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         description="ID of user to assign permissions to",
+     *         required=true,
+     *         @OA\Schema(
+     *             type="integer",
+     *             format="int64"
+     *         )
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             @OA\Property(
+     *                 property="permissions",
+     *                 type="array",
+     *                 @OA\Items(type="integer", example=1)
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Success",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="User has been updated."),
+     *             @OA\Property(
+     *                 property="data",
+     *                 ref="#/components/schemas/User"
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthenticated",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Unauthenticated.")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Forbidden",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Not authorized."),
+     *             @OA\Property(property="status", type="integer", example=403)
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="User not found",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="User not found.")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Validation Error",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="The given data was invalid."),
+     *             @OA\Property(
+     *                 property="errors",
+     *                 type="object",
+     *                 @OA\Property(
+     *                     property="permissions.0",
+     *                     type="array",
+     *                     @OA\Items(type="string", example="The selected permissions.0 is invalid.")
+     *                 )
+     *             )
+     *         )
+     *     )
+     * )
+     */
     public function assignPermissions(AssignPermissionsRequest $request, int $id)
     {
         $user = User::query()->where('super_admin', '=', false)->find($id);
@@ -242,8 +697,8 @@ class UserController extends BaseController
             'user_permissions_updated',
             $authUser->id,
             $user->id,
-            $originalPermissions,
-            $allowedPermissionIds
+            Permission::query()->whereIn('id', $originalPermissions)->pluck('name')->toArray(),
+            Permission::query()->whereIn('id', $allowedPermissionIds)->pluck('name')->toArray()
         );
 
         DB::commit();
