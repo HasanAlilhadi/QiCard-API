@@ -2,10 +2,9 @@
 
 namespace Database\Seeders;
 
-use App\Models\Car;
-// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
@@ -16,16 +15,26 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-//        User::create([
-//            'username' => 'mrlaruso',
-//            'name' => 'Hasan Alilhadi',
-//            'password' => '1234'
-//        ]);
-
-        $role = Role::create([
-            'name' => 'welcommer'
+        $this->call([
+            PermissionsSeeder::class,
+            RoleSeeder::class,
         ]);
-        $user = User::query()->find(1);
-        $user->roles()->attach($role);
+
+        $user = User::create([
+            'username' => 'admin',
+            'name' => 'Hasan Alilhadi',
+            'password' => '1234',
+            'super_admin' => true
+        ]);
+
+        Permission::query()->update([
+            'created_by' => $user->id
+        ]);
+
+        $permissions = Permission::query()->get()->pluck('id')->toArray();
+        $user->permissions()->sync($permissions);
+        $user->assignRole('super_admin');
+
+        DB::table('personal_access_tokens')->truncate();
     }
 }

@@ -21,7 +21,7 @@ class Authentication
         {
             return response()->json([
                 'success' => false,
-                'message' => __('unauthenticated'),
+                'message' => 'Unauthenticated.',
             ], 401);
         }
         return $next($request);

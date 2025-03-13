@@ -12,6 +12,16 @@ class PermissionResource extends BaseResource
         return [
             'id' => $this->id,
             'name' => $this->name,
+            'group' => $this->group,
+        ];
+    }
+
+    public function relations(Request $request): array
+    {
+        return [
+            'creator' => UserResource::make($this->whenLoaded('creator')),
+            'updater' => UserResource::make($this->whenLoaded('updater')),
+            'destroyer' => UserResource::make($this->whenLoaded('destroyer')),
         ];
     }
 }
