@@ -117,6 +117,41 @@ After running the migrations and seeders, a default admin user will be created:
 - **Password**: 1234
 - **Role**: super_admin
 
+#### Default Permissions
+
+The system comes with the following pre-configured permissions, grouped by functionality:
+
+**Users Group:**
+- `show_users` - View user listings and details
+- `create_users` - Create new user accounts
+- `edit_users` - Modify existing user accounts
+- `delete_users` - Remove user accounts
+
+**Permissions Group:**
+- `show_permissions` - View permission listings
+- `create_permissions` - Create new permissions
+- `edit_permissions` - Modify existing permissions
+- `delete_permissions` - Remove permissions
+- `assign_permissions` - Assign permissions to users or roles
+
+**Roles Group:**
+- `show_roles` - View role listings
+- `create_roles` - Create new roles
+- `edit_roles` - Modify existing roles
+- `delete_roles` - Remove roles
+- `assign_roles` - Assign roles to users
+
+**AuditLogs Group:**
+- `show_audit_logs` - View system audit logs
+
+All of these are marked as system permissions (`is_system_permission=true`), which protects them from being deleted through the API.
+
+#### Default Roles
+
+The system includes one pre-configured role:
+
+- **super_admin**: Has all system permissions and is marked as a system role (`is_system_role=true`), which prevents it from being deleted.
+
 ## API Endpoints
 
 ### Authentication
