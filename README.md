@@ -137,7 +137,7 @@ After running the migrations and seeders, a default admin user will be created:
 This API is thoroughly documented using Swagger/OpenAPI. You can access the full API documentation at:
 
 ```
-http://localhost:8000/api/docs
+http://localhost:8000/api/documentation
 ```
 
 The documentation provides detailed information about all endpoints, request parameters, response formats, and authentication requirements.
