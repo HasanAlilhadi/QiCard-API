@@ -1,4 +1,4 @@
-# Laravel User Management System
+# Laravel User Management System for QiCard
 
 A comprehensive user management system built with Laravel, featuring role-based access control (RBAC), permissions, and detailed audit logging.
 
@@ -61,6 +61,7 @@ The system uses the following database tables:
 ### Prerequisites
 
 - PHP 8.1 or higher
+- Laravel 11.x
 - Composer
 - MySQL or PostgreSQL
 
